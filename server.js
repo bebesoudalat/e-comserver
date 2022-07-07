@@ -5,6 +5,7 @@ let bodyParser = require('body-parser');
 let cors = require('cors');
 let mysql = require ('mysql');
 const req = require('express/lib/request');
+const crypto = require('crypto');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
@@ -44,8 +45,11 @@ let dbCon = mysql.createConnection({
 dbCon.connect();
 
 //retrieve all books
-app.get('/category', (req, res) => {
-    dbCon.query('select * from tb_category', (error, results, fields) => {
+app.get('/product_search', (req, res) => {
+    let keyword = req.query.keyword
+    console.log(keyword)
+
+    dbCon.query('SELECT * FROM tb_product WHERE productName like "%' + keyword + '%"', (error, results, fields) => {
         if(error) throw error;
 
         let message = ""
@@ -55,6 +59,37 @@ app.get('/category', (req, res) => {
             message = "successfully retrieve category";
         }
         return res.send ({ error: false, data: results, message: message });
+    })
+})
+app.get('/product_search/:keyword', (req, res) => {
+    // let keyword = req.params;
+    // console.log(keyword)
+ 
+    dbCon.query('SELECT * FROM tb_product WHERE productName like "%' + req.params.keyword + '%"', (error, results, fields) => {
+        if(error) throw error;
+
+        let message = ""
+        if (results === undefined || results.length == 0){
+            message = "category table is empty";
+        } else {
+            message = "successfully retrieve category";
+        }
+        return res.send ({ error: false, data: results, message: message });
+    })
+})
+
+//category
+app.get('/category', (req,res) => {
+    dbCon.query('select * from tb_category', (error, results, fields) =>{
+        if (error) throw error;
+
+        let message =""
+        if (results === undefined || results.lenght == 0){
+            message = "category table is empty";
+        }else{
+            message = "successfully retrive category";
+        }
+        return res.send ({ error: false, data: results, message:message});
     })
 })
 
@@ -124,27 +159,47 @@ app.put('/category_update', (req,res) => {
 
 
 // delete
-app.get('/category_delete/(:cateID)', (req, res) =>{
-    let id = req.params.cateID;
+// app.post('/delete_category',(req, res) =>{
+//     const {cateID} = req.body
 
-    if(!id){
-        return res.status(400).send({ error: true, message: " please provide category id"})
+//     if(!cateID){
+//         return res.status(400).send({ error: true, message: " please provide category id"})
+//     } else {
+//         dbCon.query('DELETE FROM tb_category WHERE cateID = ?' , [cateID], (error, results, fields) => {
+//             if (error) throw error;
+
+//             let message = "";
+//             if (results.affectedRows === 0){
+//                 message = "category not found";
+//             } else {
+//                 message = " category successully deleted";
+//             }
+
+//             return res.send({ error: false, data: results, message: message})
+
+//         })
+//     }
+// })
+
+app.delete("/delete_category/:cateID",(req,res)=>{
+    const {cateID} = req.params
+    console.log(req.params)
+    if (!cateID) {
+        return res.status(400).send({error: true, message:"no id", status: 0})
     } else {
-        dbCon.query('DELETE FROM tb_category WHERE cateID = ?', [id], (error, results, fields) => {
-            if (error) throw error;
-
-            let message = "";
-            if (results.affectedRows === 0){
-                message = "category not found";
-            } else {
-                message = " category successully deleted";
+        dbCon.query('DELETE FROM tb_category WHERE tb_category.cateID = ?',[cateID],(error, results,fields)=>{
+            try {
+                if(error) throw error;
+            return res.send({error:false,data:results,message:"success",staus:1})
+            } catch (error) {
+                
             }
-
-            return res.send({ error: false, data: results, message: message})
-
         })
+        
     }
 })
+
+
 
 
 //read table unit
@@ -207,12 +262,12 @@ app.put('/unit_update', (req,res) => {
 
 //delete unit 
 app.delete('/unit_delete/:unitID', (req,res) => {
-    let id = req.params.unitID;
+    const {unitID} = req.params;
 
-    if(!id){
+    if(!unitID){
         return res.status(400).send({error: true, message:"please provide unit id"})
     } else {
-        dbCon.query('delete from tb_unit where unitID = ?', [id], (error, results, fields) => {
+        dbCon.query('delete from tb_unit where tb_unit.unitID = ?', [unitID], (error, results, fields) => {
             if(error) throw error;
 
             let message = ""
@@ -230,11 +285,11 @@ app.delete('/unit_delete/:unitID', (req,res) => {
 
 //show employee
 app.get('/employee', (req,res) => {
-    dbCon.query('select * from tb_employee', (error, results, fields) => {
+    dbCon.query('SELECT * FROM tb_employee', (error, results, fields) => {
         if(error) throw error;
 
         let message = ""
-        if(results == undefined || results.length == 0){
+        if(results === undefined || results.length == 0){
             message = "employee is empty";
         } else {
             message = "employee all retrieve";
@@ -246,12 +301,12 @@ app.get('/employee', (req,res) => {
 
 // add employee 
 app.post ('/add_employee', (req,res) => {
-    let {emName,surname,date_of_birth,gender,address,tel,user,password} = req.body;
+    let {emName,surname,date_of_birth,gender,address,tel,ID_card,user,password} = req.body;
 
-    if(!emName || !surname || !date_of_birth || !gender || !address || !tel || !user || !password) {
+    if(!emName || !surname || !date_of_birth || !gender || !address || !tel || !ID_card || !user || !password) {
         return res.status(200).send({error:true, message:"please provide employee information"})
     } else {
-        dbCon.query('insert into tb_employee (emName,surname,date_of_birth,gender,address,tel,user,password) values (?,?,?,?,?,?,?,?)', [emName,surname,date_of_birth,gender,address,tel,user,password] , (error, results, fields) => {
+        dbCon.query('insert into tb_employee (emName,surname,date_of_birth,gender,address,tel,ID_card,user,password) values (?,?,?,?,?,?,?,?,?)', [emName,surname,date_of_birth,gender,address,tel,ID_card,user,crypto.createHash('md5').update(password).digest('hex')] , (error, results, fields) => {
             if(error) throw error;
             return res.send({error:false, data: results, message:"employee insert successfully"})
         })
@@ -366,6 +421,23 @@ app.put('/supplier_update',(req,res) => {
     }
 })
 
+//delete supplier
+app.delete("/delete_supplier/:supID",(req,res)=>{
+    const {supID} = req.params
+    console.log(req.params)
+    if (!supID) {
+        return res.status(400).send({error: true, message:"no id", status: 0})
+    } else {
+        dbCon.query('DELETE FROM tb_suppliers WHERE tb_suppliers.supID = ?',[supID],(error, results,fields)=>{
+            try {
+                if(error) throw error;
+            return res.send({error:false,data:results,message:"success",staus:1})
+            } catch (error) {
+                
+            }
+        })
+    }
+})
 // show product
 app.get('/product', (req,res) => {
     dbCon.query('select * from tb_product', (error, results, fields) => {
@@ -384,7 +456,7 @@ app.get('/product', (req,res) => {
 app.post ('/add_product', upload.single('image'),(req,res) => {
     let {cateID,unitID,supID,productName,Qty,buy_price,sell_price,description} = req.body;
     let image = req.file.filename;
-    console.log(image)
+    console.log(cateID,unitID,supID,productName,Qty,buy_price,sell_price,description)
 
     if(!cateID || !unitID || !supID || !productName || !Qty || !buy_price || !sell_price  ) {
         return res.status(200).send({error:true, message:"please provide product information"})
@@ -399,15 +471,17 @@ app.post ('/add_product', upload.single('image'),(req,res) => {
 app.put('/edit_product', upload.single('image'), (req,res)=>{
     
     let {productID,cateID,unitID,supID,productName,Qty,buy_price,sell_price,description} = req.body;
-    let image = req.file.filename;
-    console.log(req.body)
+    
+    console.log(req.file)
 
     if(!productID ||!cateID || !unitID || !supID || !productName || !Qty || !buy_price || !sell_price ){
         return res.status(200).send({error:true, message:"please provide product ID"})
     }else{
-       if (image) {
+       if (req.file) {
+        let image = req.file.filename;
+           console.log(image)
         try {
-            dbCon.query('update tb_product set cateID = ?, unitID = ?, supID = ?, productName = ?, Qty = ?, buy_price = ?, sell_price = ?, image = ? where productID = ?', [cateID,unitID,supID,productName,Qty,buy_price,sell_price,image,productID], (error,results,fields) =>{
+            dbCon.query('update tb_product set cateID = ?, unitID = ?, supID = ?, productName = ?, Qty = ?, buy_price = ?, sell_price = ?, image = ? where productID = ?', [cateID,unitID,supID,productName,Qty,buy_price,sell_price,"http://localhost:3000/present/"+image,productID], (error,results,fields) =>{
                 if(error) throw error;
     
                 let message = ""
@@ -422,6 +496,7 @@ app.put('/edit_product', upload.single('image'), (req,res)=>{
             
         }
        } else {
+        console.log(" no image")
         try {
             dbCon.query('update tb_product set cateID = ?, unitID = ?, supID = ?, productName = ?, Qty = ?, buy_price = ?, sell_price = ? where productID = ?', [cateID,unitID,supID,productName,Qty,buy_price,sell_price,productID], (error,results,fields) =>{
                 if(error) throw error;
@@ -440,6 +515,24 @@ app.put('/edit_product', upload.single('image'), (req,res)=>{
        }
     }
 })
+
+app.delete("/delete_product/:productID",(req,res)=>{
+    const {productID} = req.params
+    console.log(req.params)
+    if (!productID) {
+        return res.status(400).send({error: true, message:"no id", status: 0})
+    } else {
+        dbCon.query('DELETE FROM tb_product WHERE tb_product.productID = ?',[productID],(error, results,fields)=>{
+            try {
+                if(error) throw error;
+            return res.send({error:false,data:results,message:"success",staus:1})
+            } catch (error) {
+                
+            }
+        })
+    }
+})
+
 
 app.get('/province', (req,res) => {
     dbCon.query('select * from tb_province', (error, results, fields) => {
@@ -481,6 +574,64 @@ app.get('/village', (req,res) => {
         }
         return res.send({error: false, data: results, message: message})
     })
+})
+
+//insert tb_sale and tb_sakleDetail
+// app.post('/sale_and_saleDetail',(res,req)=>{
+//     let emID,saleID,productID,sale_qty = req.body;
+//     if(!emID || !saleID){
+//         return res.status(200).send({error:true, message:"please provide emID"})
+//     }else{
+//         try {
+//             dbCon.query('insert into tb_sale (emID) values (?)', [emID],(error,results,fields)=>{
+//                 if(error) throw error;
+//                 return res.send({error: false, data: results, message: message})
+//             })
+            
+//         } catch (error) {
+            
+//         }
+//     }
+//     if (!saleID || !productID || !sale_qty){
+//         return res.status(200).send({error:true, message:"please provide saleID or productID"})
+//     }else{
+//         try {
+//             dbCon.query('insert into tb_saledetail (saleID,productID,sale_qty) values (?,?,?)',[saleID,productID,sale_qty],(error,results,fields)=>{
+//                 if(error) throw error;
+//                 return res.send({error: false, data: results, message:message})
+//             })
+            
+//         } catch (error) {
+            
+//         }
+//     }
+// })
+
+app.post ('/sale', (req,res) => {
+    let {emID} = req.body;
+    
+    if(!emID ) {
+        return res.status(200).send({error:true, message:"please provide employee ID"})
+    } else {
+        dbCon.query('insert into tb_sale (emID) values (?)', [emID] , (error, results, fields) => {
+            if(error) throw error;
+            return res.send({error:false, data: results, message:"employee insert successfully"})
+        })
+    }
+})
+
+app.post('/login', (req,res) => {
+    const {user,password} = req.body;
+    if (!user || !password) {
+        return res.status(200).send({error:true, message:"please provide email"})
+    } else {
+        dbCon.query("SELECT * FROM tb_employee WHERE user = ? AND password = ?", [user,password],(error,results, fields)=> {
+            if(error) throw error;
+            console.log(results)
+            return res.send({error:false, data: results, message:"you're logged in",status:1})
+        })
+    }
+
 })
 
 

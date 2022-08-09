@@ -50,7 +50,7 @@ app.get('/product_search', (req, res) => {
     let keyword = req.query.keyword
     console.log(keyword)
 
-    dbCon.query('SELECT * FROM tb_product WHERE product_code like "%' + keyword + '%"', (error, results, fields) => {
+    dbCon.query('SELECT *, tb_suppliers.supName FROM tb_product INNER JOIN tb_updateprice ON tb_product.productID = tb_updateprice.productID LEFT JOIN tb_suppliers ON tb_product.supID=tb_suppliers.supID INNER JOIN tb_category ON tb_product.cateID = tb_category.cateID INNER JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_updateprice.status = 1 and pro_std = 0 and product_code like "%' + keyword + '%"', (error, results, fields) => {
         if(error) throw error;
 
         let message = ""
@@ -319,12 +319,14 @@ app.post ('/add_employee', (req,res) => {
 // edit employee
 app.put('/employee_edit',(req,res) => {
     
-    let {emName,surname,date_of_birth,gender,address,tel,user,password} = req.body;
+    let {emID,emName,surname,date_of_birth,gender,address,tel,ID_card,user,password} = req.body;
+    console.log(req.body)
 
-    if(!emName || !surname || !date_of_birth || !gender || !address || !tel || !user || !password) {
+    if(!emID || !emName || !surname || !date_of_birth || !gender || !address || !tel || !ID_card || !user || !password) {
         return res.status(200).send({error: true, message: "please provide employee id"})
     } else {
-        dbCon.query('update tb_employee set emName = ?, surname = ?, date_of_birth = ?, gender = ?, address = ?, tel = ?, user = ?, password = ? where emID = ?', [emName,surname,date_of_birth,gender,address,tel,user,password], (error, results, fields) => {
+        dbCon.query('update tb_employee set emName = ?, surname = ?, date_of_birth = ?, gender = ?, address = ?, tel = ?, ID_card = ?, user = ?, password = ? where emID = ?', [emName,surname,date_of_birth,gender,address,tel,ID_card,user,password,emID], (error, results, fields) => {
+           try {
             if(error) throw error;
 
             let message = ""
@@ -334,6 +336,10 @@ app.put('/employee_edit',(req,res) => {
                 message = "employee updated successfully"
             }
             return res.send({error: false, data: results, message:message})
+            
+           } catch (error) {
+            
+           }
         })
     }
 })
@@ -442,7 +448,7 @@ app.delete("/delete_supplier/:supID",(req,res)=>{
 })
 // show product
 app.get('/product', (req,res) => {
-    dbCon.query('SELECT *, tb_suppliers.supName FROM tb_updateprice INNER JOIN tb_product ON tb_updateprice.productID = tb_product.productID LEFT JOIN tb_suppliers ON tb_product.supID=tb_suppliers.supID INNER JOIN tb_category ON tb_product.cateID = tb_category.cateID INNER JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_updateprice.status = 1 and pro_std = 0 order by tb_product.productID desc', (error, results, fields) => {
+    dbCon.query('SELECT *, tb_suppliers.supName FROM tb_product INNER JOIN tb_updateprice ON tb_product.productID = tb_updateprice.productID LEFT JOIN tb_suppliers ON tb_product.supID=tb_suppliers.supID INNER JOIN tb_category ON tb_product.cateID = tb_category.cateID INNER JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_updateprice.status = 1 and pro_std = 0 order by tb_product.productID desc', (error, results, fields) => {
         if (error) throw error;
         
         let message = ""
@@ -493,18 +499,18 @@ app.post ('/add_product', upload.single('image'),(req,res) => {
 
 app.put('/edit_product', upload.single('image'), (req,res)=>{
     
-    let {productID,product_code,cateID,unitID,supID,productName,qty,buy_price,sell_price,description} = req.body;
+    let {productID,cateID,unitID,supID,productName,Qty,buy_price,sell_price,description} = req.body;
+    // console.log(req.body)
+    console.log(req.file == null)
 
-    console.log(req.file)
-
-    if(!productID || !product_code || !cateID || !unitID || !supID || !productName || !qty || !buy_price || !sell_price ){
+    if(!productID || !cateID || !unitID || !supID || !productName || !Qty || !buy_price || !sell_price ){
         return res.status(200).send({error:true, message:"please provide product ID"})
     }else{
-       if (req.file) {
+       if (req.file != null) {
         let image = req.file.filename;
            console.log(image)
         try {
-            dbCon.query('update tb_product set product_code = ?,cateID = ?, unitID = ?, supID = ?, productName = ?, image = ? where productID = ?', [product_code,cateID,unitID,supID,productName,"http://localhost:3000/present/"+image,productID], (error,results,fields) =>{
+            dbCon.query('update tb_product set cateID = ?, unitID = ?, supID = ?, productName = ?, Qty = ?, image = ? where productID = ?', [cateID,unitID,supID,productName,Qty,"http://localhost:3000/present/"+image,productID], (error,results,fields) =>{
                 if(error) throw error;
     
                 let message = ""
@@ -514,7 +520,7 @@ app.put('/edit_product', upload.single('image'), (req,res)=>{
                     message = "product updated successfully"
                 }
             })
-            dbCon.query('update tb_updatePrice set buy_price = ?, sell_price = ? where productID = ? and status = 1', [buy_price,sell_price,productID], (error,results,fields) =>{
+            dbCon.query('update tb_updateprice set buy_price = ?, sell_price = ? where productID = ? and status = 1', [buy_price,sell_price,productID], (error,results,fields) =>{
                 if(error) throw error;
     
                 let message = ""
@@ -531,7 +537,7 @@ app.put('/edit_product', upload.single('image'), (req,res)=>{
        } else {
         console.log(" no image")
         try {
-            dbCon.query('update tb_product set product_code = ?, cateID = ?, unitID = ?, supID = ?, productName = ? where productID = ?', [product_code,cateID,unitID,supID,productName,productID], (error,results,fields) =>{
+            dbCon.query('update tb_product set cateID = ?, unitID = ?, supID = ?, productName = ?, Qty = ? where productID = ?', [cateID,unitID,supID,productName,Qty,productID], (error,results,fields) =>{
                 if(error) throw error;
     
                 let message = ""
@@ -541,7 +547,7 @@ app.put('/edit_product', upload.single('image'), (req,res)=>{
                     message = "product updated successfully"
                 }
             })
-            dbCon.query('update tb_updatePrice set buy_price = ?, sell_price = ?, qty = ? where productID = ? and status = 1', [buy_price,sell_price,qty,productID], (error,results,fields) =>{
+            dbCon.query('update tb_updateprice set buy_price = ?, sell_price = ? where productID = ? and status = 1', [buy_price,sell_price,productID], (error,results,fields) =>{
                 if(error) throw error;
     
                 let message = ""
@@ -802,7 +808,7 @@ app.post('/login', (req,res) => {
 // })
 
 app.get ('/showSale', (req,res) => {
-    dbCon.query('SELECT s.*, e.emName as emName FROM tb_sale s INNER JOIN tb_employee e ON s.emID = e.emID WHERE s.emID = e.emID', (error,results,fields) => {
+    dbCon.query('SELECT s.*, e.emName as emName FROM tb_sale s INNER JOIN tb_employee e ON s.emID = e.emID WHERE s.emID = e.emID order by s.saleID desc', (error,results,fields) => {
         if (error) throw error;
         
         let message = ""
@@ -834,7 +840,7 @@ app.get ('/showOutOfStock', (req,res) => {
 app.get ('/showOrderDetail', (req,res) => {
     let orderID = req.query.orderID;
     console.log(orderID);
-    dbCon.query('SELECT tb_ordedetail.*,tb_order.supID,tb_order.status,tb_suppliers.supName,tb_product.productName FROM tb_ordedetail INNER JOIN tb_order ON tb_ordedetail.orderID = tb_order.orderID LEFT JOIN tb_suppliers ON tb_order.supID = tb_suppliers.supID LEFT JOIN tb_product ON tb_ordedetail.productID = tb_product.productID WHERE tb_ordedetail.orderID ='+orderID, (error,results,fields) => {
+    dbCon.query('SELECT tb_ordedetail.*,tb_order.supID,tb_order.status,tb_suppliers.supName,tb_product.productName,tb_unit.unitName FROM tb_ordedetail INNER JOIN tb_order ON tb_ordedetail.orderID = tb_order.orderID LEFT JOIN tb_suppliers ON tb_order.supID = tb_suppliers.supID LEFT JOIN tb_product ON tb_ordedetail.productID = tb_product.productID LEFT JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_ordedetail.orderID ='+orderID, (error,results,fields) => {
         if (error) throw error;
         let message = ""
         if(results == undefined || results.lenght === 0){

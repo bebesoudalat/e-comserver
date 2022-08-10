@@ -1042,7 +1042,7 @@ app.get ('/showImportDetail_qty', (req,res) => {
     dbCon.query('SELECT tb_importdetail.*,tb_product.productName,tb_product.product_code FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID WHERE tb_import.orderID =' + orderID, (error,results,fields) => {
         if (error) throw error;
         let message = ""
-        if(results == undefined || results.lenght === 0){
+        if(results == undefined || results.length === 0){
             message = "sale Detail is empty";
         } else {
             message = "successfully retreive sale Detail Data";

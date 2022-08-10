@@ -62,6 +62,23 @@ app.get('/product_search', (req, res) => {
         return res.send ({ error: false, data: results, message: message });
     })
 })
+
+app.get('/order_search', (req, res) => {
+    let keyword = req.query.keyword
+    console.log(keyword)
+
+    dbCon.query('SELECT o.*,s.supName as supName FROM tb_order o INNER JOIN tb_suppliers s on o.supID = s.supID where orderID like "%' + keyword + '%"', (error, results, fields) => {
+        if(error) throw error;
+
+        let message = ""
+        if (results === undefined || results.length == 0){
+            message = "order table is empty";
+        } else {
+            message = "successfully retrieve order";
+        }
+        return res.send ({ error: false, data: results, message: message });
+    })
+})
 app.get('/product_search/:keyword', (req, res) => {
     // let keyword = req.params;
     // console.log(keyword)
@@ -307,10 +324,27 @@ app.post ('/add_employee', (req,res) => {
     if(!emName || !surname || !date_of_birth || !gender || !address || !tel || !ID_card || !user || !password) {
         return res.status(200).send({error:true, message:"please provide employee information"})
     } else {
-        dbCon.query('insert into tb_employee (emName,surname,date_of_birth,gender,address,tel,ID_card,user,password) values (?,?,?,?,?,?,?,?,?)', [emName,surname,date_of_birth,gender,address,tel,ID_card,user,password] , (error, results, fields) => {
-            if(error) throw error;
-            return res.send({error:false, data: results, message:"employee insert successfully"})
+        dbCon.query('select user from tb_employee where user = ?', user, (error,results,fields) => {
+            try {
+                if (error) throw error;
+                let message = ""
+                if (results.length === 0) {
+                    dbCon.query('insert into tb_employee (emName,surname,date_of_birth,gender,address,tel,ID_card,user,password) values (?,?,?,?,?,?,?,?,?)', [emName,surname,date_of_birth,gender,address,tel,ID_card,user,password] , (error, results, fields) => {
+                        if(error) throw error;
+                        message = "add employee successfully"
+                        return res.send({error:false, data: results, message:message, status : 1})
+                    })
+                } else {
+                    message = "add employee already exist"
+                        return res.send({error:true, data: results, message:message, status : 0})
+                }
+
+            } catch (error) {
+                
+            }
         })
+
+       
     }
 
 
@@ -783,9 +817,19 @@ app.post('/login', (req,res) => {
         return res.status(200).send({error:true, message:"please provide email"})
     } else {
         dbCon.query("SELECT * FROM tb_employee WHERE user = ? AND password = ?", [user,password],(error,results, fields)=> {
-            if(error) throw error;
-            console.log(results)
-            return res.send({error:false, data: results, message:"you're logged in",status:1})
+            try {
+                if (error) throw error;
+                let message = ""
+                if (results.length > 0) {
+                    message = " login successfully"
+                    return res.send({error:false, message:message, data:results, status: 1 })
+                } else {
+                    message = " login failed"
+                    return res.send({error:true, message:message, data:results, status: 0 })
+                }
+            } catch (error) {
+                
+            }
         })
         // console.log("e y ka dai")
         // return res.send "e y ka dai"
@@ -840,7 +884,7 @@ app.get ('/showOutOfStock', (req,res) => {
 app.get ('/showOrderDetail', (req,res) => {
     let orderID = req.query.orderID;
     console.log(orderID);
-    dbCon.query('SELECT tb_ordedetail.*,tb_order.supID,tb_order.status,tb_suppliers.supName,tb_product.productName,tb_unit.unitName FROM tb_ordedetail INNER JOIN tb_order ON tb_ordedetail.orderID = tb_order.orderID LEFT JOIN tb_suppliers ON tb_order.supID = tb_suppliers.supID LEFT JOIN tb_product ON tb_ordedetail.productID = tb_product.productID LEFT JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_ordedetail.orderID ='+orderID, (error,results,fields) => {
+    dbCon.query('SELECT tb_ordedetail.*,tb_order.supID,tb_order.status,tb_suppliers.supName,tb_product.productName,tb_product.product_code,tb_unit.unitName FROM tb_ordedetail INNER JOIN tb_order ON tb_ordedetail.orderID = tb_order.orderID LEFT JOIN tb_suppliers ON tb_order.supID = tb_suppliers.supID LEFT JOIN tb_product ON tb_ordedetail.productID = tb_product.productID LEFT JOIN tb_unit ON tb_product.unitID = tb_unit.unitID WHERE tb_ordedetail.orderID ='+orderID, (error,results,fields) => {
         if (error) throw error;
         let message = ""
         if(results == undefined || results.lenght === 0){
@@ -980,7 +1024,7 @@ app.get('/showImport', (req, res) => {
 app.get ('/showImportDetail', (req,res) => {
     let importID = req.query.importID;
     console.log(importID);
-    dbCon.query('SELECT tb_importdetail.*,tb_product.productName FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID WHERE tb_importdetail.importID =' + importID, (error,results,fields) => {
+    dbCon.query('SELECT tb_importdetail.*,tb_product.productName,tb_product.product_code FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID WHERE tb_importdetail.importID =' + importID, (error,results,fields) => {
         if (error) throw error;
         let message = ""
         if(results == undefined || results.lenght === 0){
@@ -995,7 +1039,7 @@ app.get ('/showImportDetail', (req,res) => {
 app.get ('/showImportDetail_qty', (req,res) => {
     let orderID = req.query.orderID;
     console.log(orderID);
-    dbCon.query('SELECT tb_importdetail.*,tb_product.productName FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID WHERE tb_import.orderID =' + orderID, (error,results,fields) => {
+    dbCon.query('SELECT tb_importdetail.*,tb_product.productName,tb_product.product_code FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID WHERE tb_import.orderID =' + orderID, (error,results,fields) => {
         if (error) throw error;
         let message = ""
         if(results == undefined || results.lenght === 0){
@@ -1008,7 +1052,7 @@ app.get ('/showImportDetail_qty', (req,res) => {
 })
 
 app.get ('/showImportDetail_report', (req,res) => {
-    dbCon.query('SELECT tb_importdetail.*,tb_product.productName, tb_employee.emName FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID LEFT JOIN tb_employee ON tb_import.emID = tb_employee.emID', (error,results,fields) => {
+    dbCon.query('SELECT tb_importdetail.*,tb_product.productName,tb_product.product_code, tb_employee.emName FROM tb_importdetail INNER JOIN tb_import ON tb_importdetail.importID = tb_import.importID LEFT JOIN tb_product ON tb_importdetail.productID = tb_product.productID LEFT JOIN tb_employee ON tb_import.emID = tb_employee.emID', (error,results,fields) => {
         if (error) throw error;
         let message = ""
         if(results == undefined || results.lenght === 0){
